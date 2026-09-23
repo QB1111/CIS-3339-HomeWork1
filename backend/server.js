@@ -1,90 +1,156 @@
-require('dotenv').config(); // 新增这一行
-const express = require('express');
-const cors = require('cors');
-const fs = require('fs');
-const path = require('path');
+import express from 'express';
+import fs from 'fs';
 const app = express();
-app.use(cors());
+const port = 3000;
+
+// allow json body
 app.use(express.json());
-const DATA_FILE = path.join(__dirname, 'students.json');
-async function loadStudents() {
-    try {
-        const data = await fs.promises.readFile(DATA_FILE, 'utf8');
-        return JSON.parse(data);
-    } catch (error) {
-        if (error.code === 'ENOENT') {
-            return [];
-        }
-        console.error('Error reading students file:', error);
-        return [];
-    }
-}
-async function saveStudents(students) {
-    try {
-        await fs.promises.writeFile(DATA_FILE, JSON.stringify(students, null, 2), 'utf8');
-    } catch (error) {
-        console.error('Error writing students file:', error);
-        throw error;
-    }
-}
-// Endpoint to search for a student by name
-app.post('/find-student', async (req, res) => {
-    try {
-        const { name } = req.body;
-        if (!name) {
-            return res.status(400).send({ error: 'Student name is required' });
-        }
-        const students = await loadStudents();
-        const student = students.find((item) => item.name === name);
-        if (!student) {
-            return res.status(404).send({ error: 'Student not found' });
-        }
-        res.send(student);
-    } catch (error) {
-        console.error('Error finding student:', error);
-        res.status(500).send({ error: 'Internal server error' });
-    }
-});
-// Endpoint to save a student
-app.post('/add-student', async (req, res) => {
-    try {
-        const { name, id, phone, zip } = req.body;
-        if (!name || !id || !phone || !zip) {
-            return res.status(400).send({ error: 'All fields (name, id, phone, zip) are required' });
-        }
-        const students = await loadStudents();
-        const newStudent = { name, id, phone, zip };
-        students.push(newStudent);
-        await saveStudents(students);
-        res.status(201).send({ message: 'Student added successfully', student: newStudent });
-    } catch (error) {
-        console.error('Error adding student:', error);
-        res.status(500).send({ error: 'Internal server error' });
-    }
-});
-// Endpoint to delete a student by name
-app.post('/delete-student', async (req, res) => {
-    try {
-        const { name } = req.body;
-        if (!name) {
-            return res.status(400).send({ error: 'Student name is required' });
-        }
-        const students = await loadStudents();
-        const index = students.findIndex((item) => item.name === name);
-        if (index === -1) {
-            return res.status(404).send({ error: 'Student not found' });
-        }
-        const deletedStudent = students.splice(index, 1)[0];
-        await saveStudents(students);
-        res.send({ message: 'Student deleted successfully', student: deletedStudent });
-    } catch (error) {
-        console.error('Error deleting student:', error);
-        res.status(500).send({ error: 'Internal server error' });
-    }
-});
-// Start the server
-const PORT = process.env.PORT || 3000; // 修改这一行，读取.env端口
-app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
+// allow cross origin
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE');
+  res.header('Access-Control-Allow-Headers', 'Content-Type');
+  next();
 });
 
+// load data
+function loadStudents() {
+  const raw = fs.readFileSync('./students.json', 'utf8');
+  return JSON.parse(raw);
+}
+function saveStudents(data) {
+  fs.writeFileSync('./students.json', JSON.stringify(data, null, 2));
+}
+
+function loadCourses() {
+  const raw = fs.readFileSync('./courses.json', 'utf8');
+  return JSON.parse(raw);
+}
+function saveCourses(data) {
+  fs.writeFileSync('./courses.json', JSON.stringify(data, null, 2));
+}
+
+function loadEnrollments() {
+  const raw = fs.readFileSync('./enrollments.json', 'utf8');
+  return JSON.parse(raw);
+}
+function saveEnrollments(data) {
+  fs.writeFileSync('./enrollments.json', JSON.stringify(data, null, 2));
+}
+
+// ========= Student APIs =========
+// Add student
+app.post('/add-student', (req, res) => {
+  const students = loadStudents();
+  const newStu = {
+    id: req.body.id,
+    name: req.body.name,
+    phone: req.body.phone,
+    zip: req.body.zip
+  };
+  const exists = students.find(s => s.id == newStu.id);
+  if (exists) {
+    return res.json({ message: "Student ID already exists" });
+  }
+  students.push(newStu);
+  saveStudents(students);
+  res.json({ message: "Student added successfully" });
+});
+
+// Find student by name
+app.post('/find-student', (req, res) => {
+  const students = loadStudents();
+  const searchName = req.body.name.trim().toLowerCase();
+  const found = students.find(s => s.name.toLowerCase() === searchName);
+  if (!found) {
+    return res.status(400).json({ error: "Student not found" });
+  }
+  res.json(found);
+});
+
+// Delete student by name
+app.post('/delete-student', (req, res) => {
+  let students = loadStudents();
+  const delName = req.body.name.trim().toLowerCase();
+  const beforeCount = students.length;
+  students = students.filter(s => s.name.toLowerCase() !== delName);
+  if (students.length === beforeCount) {
+    return res.json({ message: "Student not found" });
+  }
+  saveStudents(students);
+  res.json({ message: "Student deleted successfully" });
+});
+
+// ========= Course APIs =========
+// Get all courses
+app.get('/all-courses', (req, res) => {
+  const courses = loadCourses();
+  res.json(courses);
+});
+
+// Add course
+app.post('/add-course', (req, res) => {
+  const courses = loadCourses();
+  const newCourse = {
+    id: req.body.id,
+    title: req.body.title
+  };
+  const exists = courses.find(c => c.id == newCourse.id);
+  if (exists) {
+    return res.json({ message: "Course ID already exists" });
+  }
+  courses.push(newCourse);
+  saveCourses(courses);
+  res.json({ message: "Course added successfully" });
+});
+
+// Delete course
+app.post('/delete-course', (req, res) => {
+  let courses = loadCourses();
+  const cid = Number(req.body.id);
+  courses = courses.filter(c => c.id !== cid);
+  saveCourses(courses);
+
+  // also delete related enrollments
+  let enrollments = loadEnrollments();
+  enrollments = enrollments.filter(e => e.courseId !== cid);
+  saveEnrollments(enrollments);
+  res.json({ message: "Course deleted" });
+});
+
+// ========= Enroll APIs =========
+app.post('/enroll', (req, res) => {
+  const enrollments = loadEnrollments();
+  const sid = Number(req.body.studentId);
+  const cid = Number(req.body.courseId);
+
+  const students = loadStudents();
+  const courses = loadCourses();
+  const stuExists = students.find(s => s.id === sid);
+  const courseExists = courses.find(c => c.id === cid);
+  if (!stuExists || !courseExists) {
+    return res.status(400).json({ error: "Student or Course does not exist" });
+  }
+
+  const already = enrollments.find(e => e.studentId === sid && e.courseId === cid);
+  if (already) {
+    return res.json({ message: "Already enrolled" });
+  }
+  enrollments.push({ studentId: sid, courseId: cid });
+  saveEnrollments(enrollments);
+  res.json({ message: "Enroll successful" });
+});
+
+// Get all students in one course
+app.get('/course-students/:cid', (req, res) => {
+  const cid = Number(req.params.cid);
+  const enrollments = loadEnrollments();
+  const students = loadStudents();
+  const enrolledIds = enrollments.filter(e => e.courseId === cid).map(e => e.studentId);
+  const result = students.filter(s => enrolledIds.includes(s.id));
+  res.json(result);
+});
+
+app.listen(port, () => {
+  console.log(`Server running on http://localhost:${port}`);
+});
