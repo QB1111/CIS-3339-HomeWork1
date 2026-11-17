@@ -1,28 +1,35 @@
-```
 # CIS 3339 Homework 1
-This project uses Node.js/Express REST API as backend and Vue 3 as frontend.
 
-## How to run
-1. Start backend
+This project is a Student Management System using Vue 3 for the frontend, Node.js/Express for the backend, and MongoDB for the database.
+
+## How to Run
+
+1. Make sure MongoDB is running.
+
+2. Open a terminal in the project folder.
+
+3. Install dependencies:
+
+```bash
+npm run install:all
 ```
 
-cd backend
-node server.js
+4. Build the frontend:
 
-```
-Backend server runs on http://localhost:3000
-
-2. Start frontend
+```bash
+npm run build
 ```
 
-cd frontend
-npm install axios
-npm run dev
+5. Start the application:
 
+```bash
+npm start
 ```
-Frontend webpage: http://localhost:5174
+
+6. Open http://localhost:3000 in your browser.
 
 ## Features
+
 - Add Student (id, name, phone, zip; prevents duplicate student ID)
 - Find Student by Name (return student id, name, phone, zip)
 - Delete Student by Name
@@ -30,4 +37,13 @@ Frontend webpage: http://localhost:5174
 - Delete Course (also removes related enrollment records)
 - Enroll student into a course
 - Show all enrolled students in a selected course
-```
+
+## Technologies
+
+- Vue 3
+- Vue Router
+- Pinia
+- Node.js
+- Express
+- MongoDB
+- Mongoose

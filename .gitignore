@@ -14,3 +14,14 @@ Thumbs.db
 # Unused project assets
 images/
 public/
+
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build output
+frontend/dist/
+
+# Environment variables
+.env
+**/.env
